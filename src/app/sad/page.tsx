@@ -19,9 +19,9 @@ export default function SadPage() {
         </div>
         
         <PlateEditor 
-          pageType="sad"
-          storageKey="sad-editor-content"
-        />
+            pageType="sad"
+            storageKey="sad-editor-content"
+          />
       </div>
     </div>
   );

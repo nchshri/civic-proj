@@ -18,9 +18,9 @@ export default function HappyPage() {
         </div>
         
         <PlateEditor 
-          pageType="happy"
-          storageKey="happy-editor-content"
-        />
+            pageType="happy"
+            storageKey="happy-editor-content"
+          />
       </div>
     </div>
   );
