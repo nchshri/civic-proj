@@ -14,7 +14,7 @@ export default function SadPage() {
             Transform text to sound sad.
           </p>
           <p className="text-sm text-gray-500 mt-2">
-            (Use <code className="bg-gray-200 px-2 py-1 rounded">/rewrite</code> to make your text sadder - coming soon!)
+            (Use <code className="bg-gray-200 px-2 py-1 rounded">/rewrite</code> to make your text sadder)
           </p>
         </div>
         

@@ -1,13 +1,38 @@
-import { Descendant } from 'slate';
+import { BaseEditor, Descendant } from 'slate';
+import { ReactEditor } from 'slate-react';
 
-export interface HappyTextElement {
+export type HappyTextElement = {
   type: 'happy-text';
-  children: Descendant[];
-}
+  quoteId?: string;
+  children: [{ text: string }];
+};
 
-export interface SadTextElement {
+export type SadTextElement = {
   type: 'sad-text';
-  children: Descendant[];
+  quoteId?: string;
+  children: [{ text: string }];
+};
+
+export type ParagraphElement = {
+  type: 'p';
+  children: { text: string }[];
+};
+
+export type CustomElement =
+  | HappyTextElement
+  | SadTextElement
+  | ParagraphElement;
+
+export type CustomText = {
+  text: string;
+};
+
+declare module 'slate' {
+  interface CustomTypes {
+    Editor: BaseEditor & ReactEditor;
+    Element: CustomElement;
+    Text: CustomText;
+  }
 }
 
 export type EditorValue = Descendant[];

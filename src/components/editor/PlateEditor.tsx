@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { createEditor, Descendant, Transforms } from 'slate';
-import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
+import { createEditor, Descendant, Transforms, Editor, Node } from 'slate';
+import { Slate, Editable, withReact, ReactEditor, RenderElementProps } from 'slate-react';
 import { withHistory } from 'slate-history';
-import { initialValue } from '@/src/lib/plate-config';
+import { initialValue, withHappySadElements, withInlineElements } from '@/src/lib/plate-config';
 import { useLocalStorage } from '@/src/hooks/useLocalStorage';
 import { useAI } from '@/src/hooks/useAI';
 import { EditorValue } from '@/src/types/plate-types';
+import { HappyElement } from './HappyElement';
+import { SadElement } from './SadElement';
 
 interface PlateEditorProps {
   pageType: 'happy' | 'sad';
@@ -22,7 +24,12 @@ export default function PlateEditor({ pageType, storageKey }: PlateEditorProps) 
   
   const editorRef = useRef<ReactEditor | null>(null);
   if (!editorRef.current) {
-    editorRef.current = withHistory(withReact(createEditor())) as ReactEditor;
+    const base = createEditor();
+    const withReactEditor = withReact(base);
+    const withHistoryEditor = withHistory(withReactEditor);
+    const withInlinesEditor = withInlineElements(withHistoryEditor);
+    const withHappySadEditor = withHappySadElements(withInlinesEditor);
+    editorRef.current = withHappySadEditor as ReactEditor;
   }
   const editor = editorRef.current;
   
@@ -37,21 +44,27 @@ export default function PlateEditor({ pageType, storageKey }: PlateEditorProps) 
     setIsClient(true);
   }, []);
   
+  // load from storage
   useEffect(() => {
-    if (isClient && !isLoadingFromStorageRef.current) {
+    if (isClient && !isLoadingFromStorageRef.current && storedValue.length > 0) {
       isLoadingFromStorageRef.current = true;
 
-      Transforms.delete(editor, {
-        at: {
-          anchor: { path: [0, 0], offset: 0 },
-          focus: { path: [editor.children.length - 1, 0], offset: 0 },
-        },
+      Editor.withoutNormalizing(editor, () => {
+        Transforms.delete(editor, {
+          at: {
+            anchor: Editor.start(editor, []),
+            focus: Editor.end(editor, []),
+          },
+        });
+        
+        for (let i = editor.children.length - 1; i >= 0; i--) {
+          Transforms.removeNodes(editor, { at: [i] });
+        }
+        
+        for (let i = 0; i < storedValue.length; i++) {
+          Transforms.insertNodes(editor, storedValue[i], { at: [i] });
+        }
       });
-      
-      Transforms.removeNodes(editor, { at: [0] });
-      for (let i = 0; i < storedValue.length; i++) {
-        Transforms.insertNodes(editor, storedValue[i], { at: [i] });
-      }
     }
   }, [isClient, storedValue, editor]);
 
@@ -61,12 +74,7 @@ export default function PlateEditor({ pageType, storageKey }: PlateEditorProps) 
 
   const getEditorText = (editorValue: Descendant[]): string => {
     return editorValue
-      .map((node: any) => {
-        if (node.children) {
-          return node.children.map((child: any) => child.text || '').join('');
-        }
-        return '';
-      })
+      .map((node) => Node.string(node))
       .join('\n');
   };
 
@@ -81,31 +89,32 @@ export default function PlateEditor({ pageType, storageKey }: PlateEditorProps) 
   };
 
   const replaceEditorContent = (newText: string) => {
-    Transforms.select(editor, {
-      anchor: { path: [0, 0], offset: 0 },
-      focus: { path: [editor.children.length - 1, 0], offset: 0 },
+    Editor.withoutNormalizing(editor, () => {
+      Transforms.select(editor, {
+        anchor: Editor.start(editor, []),
+        focus: Editor.end(editor, []),
+      });
+
+      Transforms.delete(editor);
+
+      for (let i = editor.children.length - 1; i >= 0; i--) {
+        Transforms.removeNodes(editor, { at: [i] });
+      }
+
+      Transforms.insertNodes(editor, {
+        type: 'p',
+        children: [{ text: newText }]
+      } as any, { at: [0] });
     });
-
-    Transforms.delete(editor);
-
-    for (let i = editor.children.length - 1; i >= 0; i--) {
-      Transforms.removeNodes(editor, { at: [i] });
-    }
-    
-    Transforms.insertNodes(editor, {
-      children: [{ text: newText }]
-    }, { at: [0] });
   };
 
   const handleAIRewrite = async (textToRewrite: string) => {
     if (!textToRewrite) return;
     
-    console.log('AI rewriting:', textToRewrite);
     setSaveStatus('saving');
     
     try {
       const rewrittenText = await rewriteText(textToRewrite);
-      console.log('AI returned:', rewrittenText);
       
       replaceEditorContent(rewrittenText);
       
@@ -115,7 +124,6 @@ export default function PlateEditor({ pageType, storageKey }: PlateEditorProps) 
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (error) {
-      console.error('AI error:', error);
       setSaveStatus('idle');
     }
   };
@@ -144,18 +152,20 @@ export default function PlateEditor({ pageType, storageKey }: PlateEditorProps) 
   }, [setStoredValue, isAILoading]);
 
   const handleClear = () => {
-    Transforms.delete(editor, {
-      at: {
-        anchor: { path: [0, 0], offset: 0 },
-        focus: { path: [editor.children.length - 1, 0], offset: 0 },
-      },
+    Editor.withoutNormalizing(editor, () => {
+      Transforms.delete(editor, {
+        at: {
+          anchor: Editor.start(editor, []),
+          focus: Editor.end(editor, []),
+        },
+      });
+      
+      for (let i = editor.children.length - 1; i >= 0; i--) {
+        Transforms.removeNodes(editor, { at: [i] });
+      }
+      
+      Transforms.insertNodes(editor, initialValue[0], { at: [0] });
     });
-    
-    for (let i = editor.children.length - 1; i >= 0; i--) {
-      Transforms.removeNodes(editor, { at: [i] });
-    }
-    
-    Transforms.insertNodes(editor, initialValue[0], { at: [0] });
 
     setStoredValue(initialValue);
     setSaveStatus('idle');
@@ -164,6 +174,19 @@ export default function PlateEditor({ pageType, storageKey }: PlateEditorProps) 
       clearTimeout(saveTimeoutRef.current);
     }
   };
+
+  const renderElement = useCallback((props: RenderElementProps) => {
+    switch (props.element.type) {
+      case 'happy-text':
+        return <HappyElement {...props} />;
+      case 'sad-text':
+        return <SadElement {...props} />;
+      case 'p':
+        return <p {...props.attributes}>{props.children}</p>;
+      default:
+        return <div {...props.attributes}>{props.children}</div>;
+    }
+  }, []);
 
   if (!isClient) {
     return (
@@ -208,8 +231,9 @@ export default function PlateEditor({ pageType, storageKey }: PlateEditorProps) 
           onChange={handleChange}
         >
           <Editable
+            renderElement={renderElement}
             className="outline-none min-h-[400px] p-4"
-            placeholder="Start typing... Type /rewrite at the end to transform"
+            placeholder="Start Typing.."
             readOnly={isAILoading}
             style={{
               fontSize: '16px',
@@ -235,12 +259,29 @@ export default function PlateEditor({ pageType, storageKey }: PlateEditorProps) 
         </button>
       </div>
 
-      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs">
-        <div className="font-medium text-blue-900 mb-1">Instructions:</div>
-        <div className="text-blue-700 space-y-1">
-          <div>1. Type: "The weather is okay"</div>
-          <div>2. Type: "/rewrite" (full text: "The weather is okay/rewrite")</div>
-          <div>3. AI transforms it to be {pageType}!</div>
+      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+        <div className="font-bold text-blue-900 mb-2">Features:</div>
+        <div className="text-blue-700 space-y-2">
+          <div>
+            <strong>1. Clickable Words (Auto):</strong>
+            <div className="ml-4 text-xs mt-1">
+              • Type "happy" + SPACE
+              <br />
+              • Type "sad" + SPACE
+              <br />
+              • Click any word to see a random quote
+            </div>
+          </div>
+          <div>
+            <strong>2. AI Rewrite:</strong>
+            <div className="ml-4 text-xs mt-1">
+              • Type text, add "/rewrite" at end
+              <br />
+              • Example: "The weather is okay/rewrite"
+              <br />
+              • AI makes it {pageType}!
+            </div>
+          </div>
         </div>
       </div>
     </div>
