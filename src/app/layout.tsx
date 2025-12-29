@@ -22,7 +22,7 @@ export default function RootLayout({
           <div className="w-full mx-auto py-4">
             <div className="flex items-center justify-between">
               <h2 className="ml-4 text-2xl font-bold text-gray-800">
-                Civic Project
+                <Link href="/">Civic Project</Link>
               </h2>
               
               <div className="flex text-sm text-gray-500 gap-1 mr-4">

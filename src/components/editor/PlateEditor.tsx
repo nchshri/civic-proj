@@ -263,7 +263,7 @@ export default function PlateEditor({ pageType, storageKey }: PlateEditorProps) 
         <div className="font-bold text-blue-900 mb-2">Features:</div>
         <div className="text-blue-700 space-y-2">
           <div>
-            <strong>1. Clickable Words (Auto):</strong>
+            <strong>Clickable Words</strong>
             <div className="ml-4 text-xs mt-1">
               • Type "happy" + SPACE
               <br />
@@ -273,7 +273,7 @@ export default function PlateEditor({ pageType, storageKey }: PlateEditorProps) 
             </div>
           </div>
           <div>
-            <strong>2. AI Rewrite:</strong>
+            <strong>AI Rewrite</strong>
             <div className="ml-4 text-xs mt-1">
               • Type text, add "/rewrite" at end
               <br />
