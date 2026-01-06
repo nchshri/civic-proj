@@ -1,10 +1,10 @@
 'use client';
 
-import PlateEditor from '@/src/components/editor/PlateEditor';
+import PlateEditor from '@/src/components/editor/plate-editor';
 
 export default function HappyPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-pink-50">
+    <div className="min-h-screen bg-white">
       <div className="container mx-auto py-12 px-4">
         <div className="mb-8 text-center">
           <h1 className="text-5xl font-bold text-yellow-600 mb-3">

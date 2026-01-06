@@ -1,6 +1,6 @@
 'use client';
 
-import PlateEditor from '@/src/components/editor/PlateEditor';
+import PlateEditor from '@/src/components/editor/plate-editor';
 
 export default function SadPage() {
   return (

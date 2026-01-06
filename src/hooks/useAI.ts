@@ -1,4 +1,4 @@
-import { useState } from 'react';
+/*import { useState } from 'react';
 
 interface UseAIProps {
   tone: 'happy' | 'sad';
@@ -58,4 +58,4 @@ export function useAI({ tone }: UseAIProps): UseAIReturn {
   };
 
   return { rewriteText, isLoading, error };
-}
+}*/

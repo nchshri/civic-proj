@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+/*import { useState, useEffect } from 'react';
 
 export function useLocalStorage<T>(
   key: string,
@@ -30,4 +30,4 @@ export function useLocalStorage<T>(
   };
 
   return [storedValue, setValue];
-}
+}*/
