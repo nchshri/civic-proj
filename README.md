@@ -167,7 +167,7 @@ export const SadPlugin = createPlatePlugin({
 - Streams responses via AI SDK
 - Supports multiple AI operations (generate, edit, comment)
 
-**Editor Configuration** (`src/components/editor/PlateEditor.tsx`):
+**Editor Configuration** (`src/components/editor/plate-editor.tsx`):
 - Dynamically injects `pageType` into AI plugin options
 - Uses `useEffect` to update plugin configuration
 - Maintains type safety with proper TypeScript casting
