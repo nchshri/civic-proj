@@ -15,10 +15,10 @@ export default function HomePage() {
         <div className="bg-gray-50 rounded-lg p-6 mb-8">
           <h2 className="font-semibold text-gray-900 mb-3">Features:</h2>
           <ul className="space-y-2 text-sm text-gray-700">
-            <li>• AI tone rewriting with /rewrite command</li>
-            <li>• Interactive "happy" and "sad" clickable words</li>
+            <li>• AI tone rewriting with rewrite command from menu (Ctrl + J)</li>
+            <li>• Interactive &apos;happy&apos; and &apos;sad&apos; clickable words</li>
             <li>• Auto-save with localStorage</li>
-            <li>• Real-time editing with Slate.js</li>
+            <li>• Real-time editing with Plate.js</li>
           </ul>
         </div>
 
