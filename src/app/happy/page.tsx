@@ -4,7 +4,7 @@ import PlateEditor from '@/src/components/editor/plate-editor';
 
 export default function HappyPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-amber-50">
       <div className="container mx-auto py-12 px-4">
         <div className="mb-8 text-center">
           <h1 className="text-5xl font-bold text-yellow-600 mb-3">

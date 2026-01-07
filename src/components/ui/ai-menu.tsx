@@ -138,9 +138,6 @@ export function AIMenu() {
 
   useHotkeys('esc', () => {
     api.aiChat.stop();
-
-    // remove when you implement the route /api/ai/command
-    (chat as any)._abortFakeStream();
   });
 
   const isLoading = status === 'streaming' || status === 'submitted';
@@ -395,17 +392,6 @@ Start writing a new paragraph AFTER <Document> ONLY ONE SENTENCE`
       });
     },
   },
-  improveWriting: {
-    icon: <Wand />,
-    label: 'Improve writing',
-    value: 'improveWriting',
-    onSelect: ({ editor, input }) => {
-      void editor.getApi(AIChatPlugin).aiChat.submit(input, {
-        prompt: 'Improve the writing',
-        toolName: 'edit',
-      });
-    },
-  },
   rewrite: {
   icon: <Wand />,
   label: 'Rewrite',
@@ -541,7 +527,6 @@ const menuStateItems: Record<
   selectionCommand: [
     {
       items: [
-        aiChatItems.improveWriting,
         aiChatItems.rewrite,
         aiChatItems.comment,
         aiChatItems.emojify,
@@ -658,9 +643,6 @@ export function AILoadingBar() {
 
   useHotkeys('esc', () => {
     api.aiChat.stop();
-
-    // remove when you implement the route /api/ai/command
-    (chat as any)._abortFakeStream();
   });
 
   if (

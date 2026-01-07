@@ -3,52 +3,76 @@
 import * as React from 'react';
 import { normalizeNodeId } from 'platejs';
 import { Plate, usePlateEditor } from 'platejs/react';
-import { AIChatPlugin } from '@platejs/ai/react';
 
 import { EditorKit } from '@/src/components/editor/editor-kit';
 import { SettingsDialog } from '@/src/components/editor/settings-dialog';
 import { Editor, EditorContainer } from '@/src/components/ui/editor';
+import { AIChatPlugin } from '@platejs/ai/react';
 
 interface PlateEditorProps {
   pageType: 'happy' | 'sad';
   storageKey: string;
 }
 
-export default function PlateEditor({ pageType, storageKey }: PlateEditorProps) {
-  const customEditorKit = React.useMemo(() => {
-    return EditorKit.map(plugin => {
-      if (plugin.key === 'aiChat') {
-        return AIChatPlugin.configure({
-          ...plugin,
-          options: {
-            ...plugin.options,
-            chatOptions: {
-              ...plugin.options?.chatOptions,
-              body: {
-                ...plugin.options?.chatOptions?.body,
-                pageType,
-              },
-            },
-          },
-        });
-      }
-      return plugin;
-    });
-  }, [pageType]);
+//extend window for pageType
+declare global {
+  interface Window {
+    __editorPageType?: 'happy' | 'sad';
+  }
+}
 
+// type for AI plugin options with chatOptions
+interface AIChatPluginOptions {
+  chatOptions?: {
+    api?: string;
+    body?: Record<string, unknown>;
+  };
+  [key: string]: unknown;
+}
+
+export default function PlateEditor({ pageType, storageKey }: PlateEditorProps) {
   const editor = usePlateEditor({
-    plugins: customEditorKit,
+    plugins: EditorKit,
     value: () => {
+      if (typeof window === 'undefined') return value;
       const savedValue = localStorage.getItem(storageKey);
       return savedValue ? JSON.parse(savedValue) : value;
     },
   });
 
+  React.useEffect(() => {
+    if (editor) {
+      const currentOptions = editor.getOptions(AIChatPlugin) as AIChatPluginOptions;
+      const chatOptions = currentOptions?.chatOptions || {};
+      const existingBody = chatOptions?.body || {};
+      
+      editor.setOptions(AIChatPlugin, {
+        ...currentOptions,
+        chatOptions: {
+          ...chatOptions,
+          body: {
+            ...existingBody,
+            pageType,
+          },
+        },
+      } as unknown as Parameters<typeof editor.setOptions<typeof AIChatPlugin>>[1]);
+      
+    }
+  }, [editor, pageType]);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.__editorPageType = pageType;
+    }
+  }, [pageType]);
+
   return (
     <Plate 
       editor={editor}
       onChange={({ value }) => {
-        localStorage.setItem(storageKey, JSON.stringify(value));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(storageKey, JSON.stringify(value));
+        }
       }}
     >
       <EditorContainer>

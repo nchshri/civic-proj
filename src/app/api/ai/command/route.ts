@@ -35,13 +35,12 @@ export async function POST(req: NextRequest) {
     ctx,
     messages: messagesRaw = [],
     model,
-    pageType, // Extract pageType from the request body
+    pageType,
   } = await req.json();
 
-  console.log('=== API DEBUG ===');
-  console.log('pageType:', pageType);
-
   const { children, selection, toolName: toolNameParam } = ctx;
+
+  console.log('API Route - Received pageType:', pageType); // DEBUG
 
   const editor = createSlateEditor({
     plugins: BaseEditorKit,
@@ -58,15 +57,42 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Create system prompt based on pageType
+  // Enhanced system prompts with explicit instructions
   const systemPrompt = pageType === 'happy'
-    ? 'You are a helpful writing assistant that rewrites text to be more positive, uplifting, and happy. Maintain the core message but make it sound optimistic and cheerful.'
-    : pageType === 'sad'
-    ? 'You are a helpful writing assistant that rewrites text to be more negative, melancholic, and sad. Maintain the core message but make it sound pessimistic and gloomy.'
-    : 'You are a helpful writing assistant.';
+    ? `You are a helpful writing assistant that ALWAYS rewrites text to be extremely positive, uplifting, and happy. 
+       
+CRITICAL INSTRUCTIONS:
+- Transform ALL text to sound optimistic, cheerful, and encouraging
+- Use positive words like: amazing, wonderful, exciting, great, beautiful, fantastic
+- Replace negative words with positive alternatives
+- Add enthusiasm and energy to the tone
+- Maintain the core message but make it radiate positivity
+- NEVER use negative, sad, or neutral tones
 
-  console.log('systemPrompt:', systemPrompt);
-  console.log('=================');
+Examples:
+- "The weather is okay" → "The weather is absolutely wonderful!"
+- "I finished the task" → "I'm so excited - I completed the task brilliantly!"
+- "It's functional" → "It works amazingly well!"
+
+ALWAYS maintain this happy, positive tone in ALL responses.`
+    : pageType === 'sad'
+    ? `You are a helpful writing assistant that ALWAYS rewrites text to be melancholic, pessimistic, and sad.
+
+CRITICAL INSTRUCTIONS:
+- Transform ALL text to sound negative, gloomy, and downcast
+- Use negative words like: unfortunately, sadly, disappointing, difficult, challenging, bleak
+- Replace positive words with negative alternatives
+- Add a sense of heaviness and difficulty to the tone
+- Maintain the core message but make it sound pessimistic
+- NEVER use positive, happy, or optimistic tones
+
+Examples:
+- "The weather is nice" → "The weather is barely tolerable"
+- "I finished the task" → "I struggled through the task and finally finished it"
+- "It works well" → "It functions, though with its share of issues"
+
+ALWAYS maintain this sad, negative tone in ALL responses.`
+    : 'You are a helpful writing assistant.';
 
   const isSelecting = editor.api.isExpanded();
 
@@ -100,19 +126,21 @@ export async function POST(req: NextRequest) {
         const stream = streamText({
           experimental_transform: markdownJoinerTransform(),
           model: gatewayProvider(model || 'openai/gpt-4o-mini'),
-          system: systemPrompt, // Add system prompt here
+          system: systemPrompt, // This is set here
           prompt: '',
           tools: {
             comment: getCommentTool(editor, {
               messagesRaw,
               model: gatewayProvider(model || 'google/gemini-2.5-flash'),
               writer,
+              systemPrompt, // Pass systemPrompt to comment tool
             }),
           },
           prepareStep: async (step) => {
             if (toolName === 'comment') {
               return {
                 ...step,
+                system: systemPrompt, // Apply systemPrompt to comments
                 toolChoice: { toolName: 'comment', type: 'tool' },
               };
             }
@@ -123,16 +151,34 @@ export async function POST(req: NextRequest) {
                 messages: messagesRaw,
               });
 
+              // Create tone-specific instruction that overrides the prompt
+              let finalPrompt = editPrompt;
+              
+              if (pageType === 'happy') {
+                // Replace or prepend tone instruction
+                finalPrompt = `CRITICAL INSTRUCTION: You MUST rewrite ALL text to be extremely positive, uplifting, cheerful, and enthusiastic. Use words like: amazing, wonderful, fantastic, exciting, brilliant, delightful. Transform negative or neutral phrases into positive ones. Make everything sound optimistic and happy.
+
+${editPrompt}
+
+REMINDER: Your output MUST be positive and cheerful in tone.`;
+              } else if (pageType === 'sad') {
+                finalPrompt = `CRITICAL INSTRUCTION: You MUST rewrite ALL text to be melancholic, pessimistic, gloomy, and downcast. Use words like: unfortunately, sadly, disappointing, difficult, challenging, bleak, unfortunate. Transform positive or neutral phrases into negative ones. Make everything sound pessimistic and sad.
+
+${editPrompt}
+
+REMINDER: Your output MUST be negative and gloomy in tone.`;
+              }
+
               return {
                 ...step,
                 activeTools: [],
                 messages: [
                   {
-                    content: editPrompt,
+                    content: finalPrompt,
                     role: 'user',
                   },
                 ],
-                system: systemPrompt, // Add system prompt for edit
+                system: systemPrompt,
               };
             }
 
@@ -141,17 +187,34 @@ export async function POST(req: NextRequest) {
                 messages: messagesRaw,
               });
 
+              // Create tone-specific instruction
+              let finalPrompt = generatePrompt;
+              
+              if (pageType === 'happy') {
+                finalPrompt = `CRITICAL INSTRUCTION: You MUST generate text that is extremely positive, uplifting, cheerful, and enthusiastic. Use words like: amazing, wonderful, fantastic, exciting, brilliant, delightful. Make everything sound optimistic and happy.
+
+${generatePrompt}
+
+REMINDER: Your output MUST be positive and cheerful in tone.`;
+              } else if (pageType === 'sad') {
+                finalPrompt = `CRITICAL INSTRUCTION: You MUST generate text that is melancholic, pessimistic, gloomy, and downcast. Use words like: unfortunately, sadly, disappointing, difficult, challenging, bleak, unfortunate. Make everything sound pessimistic and sad.
+
+${generatePrompt}
+
+REMINDER: Your output MUST be negative and gloomy in tone.`;
+              }
+
               return {
                 ...step,
                 activeTools: [],
                 messages: [
                   {
-                    content: generatePrompt,
+                    content: finalPrompt,
                     role: 'user',
                   },
                 ],
                 model: gatewayProvider(model || 'openai/gpt-4o-mini'),
-                system: systemPrompt, // Add system prompt for generate
+                system: systemPrompt,
               };
             }
           },
@@ -176,10 +239,12 @@ const getCommentTool = (
     messagesRaw,
     model,
     writer,
+    systemPrompt,
   }: {
     messagesRaw: ChatMessage[];
     model: LanguageModel;
     writer: UIMessageStreamWriter<ChatMessage>;
+    systemPrompt: string;
   }
 ) =>
   tool({
@@ -189,6 +254,7 @@ const getCommentTool = (
       const { elementStream } = streamObject({
         model,
         output: 'array',
+        system: systemPrompt, // Apply systemPrompt to comments
         prompt: getCommentPrompt(editor, {
           messages: messagesRaw,
         }),

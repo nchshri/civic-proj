@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import type { OurFileRouter } from '@/src/lib/uploadthing';
+import type { OurFileRouter } from '@/src/lib/upload-thing';
 import type {
   ClientUploadedFileData,
   UploadFilesOptions,
@@ -61,8 +61,6 @@ export function useUploadFile({
 
       onUploadError?.(error);
 
-      // Mock upload for unauthenticated users
-      // toast.info('User not logged in. Mocking upload process.');
       const mockUploadedFile = {
         key: 'mock-key-0',
         appUrl: `https://mock-app-url.com/${file.name}`,
@@ -72,7 +70,6 @@ export function useUploadFile({
         url: URL.createObjectURL(file),
       } as UploadedFile;
 
-      // Simulate upload progress
       let progress = 0;
 
       const simulateProgress = async () => {
